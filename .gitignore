@@ -1,0 +1,34 @@
+# Environment variables and secrets
+.env
+.env.*
+*.env
+!.env.example
+
+# Compiled Java artifacts
+**/target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Node / Frontend
+**/node_modules/
+**/dist/
+**/dist-ssr/
+*.local
+
+# Logs
+*.log
+logs/
+**/npm-debug.log*
+**/yarn-debug.log*
+
+# IDE and OS files
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Docker volume mounts / temp files
+*.pid

@@ -1,0 +1,250 @@
+version: '3.9'
+
+services:
+
+  # ─────────────────────────── Infrastructure ───────────────────────────
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: campusiq-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: campusiq-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: campusiq-kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: campusiq-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────── Microservices ────────────────────────────
+
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: campusiq-auth
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: campusiq_auth
+      DB_USER: postgres
+      DB_PASS: postgres
+      JWT_SECRET: campusiq-super-secret-key-that-is-at-least-256-bits-long-for-hs256
+    ports:
+      - "8081:8081"
+    restart: on-failure
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: campusiq-gateway
+    depends_on:
+      - auth-service
+    environment:
+      AUTH_SERVICE_HOST: auth-service
+      CONTEST_SERVICE_HOST: contest-service
+      SUBMISSION_SERVICE_HOST: submission-service
+      LEADERBOARD_SERVICE_HOST: leaderboard-service
+      ANALYTICS_SERVICE_HOST: analytics-service
+      NOTIFICATION_SERVICE_HOST: notification-service
+      JWT_SECRET: campusiq-super-secret-key-that-is-at-least-256-bits-long-for-hs256
+    ports:
+      - "8080:8080"
+    restart: on-failure
+
+  contest-service:
+    build:
+      context: ./contest-service
+      dockerfile: Dockerfile
+    container_name: campusiq-contest
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: campusiq_contest
+      DB_USER: postgres
+      DB_PASS: postgres
+      KAFKA_BOOTSTRAP: kafka:9092
+    ports:
+      - "8082:8082"
+    restart: on-failure
+
+  submission-service:
+    build:
+      context: ./submission-service
+      dockerfile: Dockerfile
+    container_name: campusiq-submission
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: campusiq_submission
+      DB_USER: postgres
+      DB_PASS: postgres
+      KAFKA_BOOTSTRAP: kafka:9092
+    ports:
+      - "8083:8083"
+    restart: on-failure
+
+  evaluation-service:
+    build:
+      context: ./evaluation-service
+      dockerfile: Dockerfile
+    container_name: campusiq-evaluation
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: campusiq_evaluation
+      DB_USER: postgres
+      DB_PASS: postgres
+      KAFKA_BOOTSTRAP: kafka:9092
+    ports:
+      - "8084:8084"
+    restart: on-failure
+
+  leaderboard-service:
+    build:
+      context: ./leaderboard-service
+      dockerfile: Dockerfile
+    container_name: campusiq-leaderboard
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP: kafka:9092
+    ports:
+      - "8085:8085"
+    restart: on-failure
+
+  analytics-service:
+    build:
+      context: ./analytics-service
+      dockerfile: Dockerfile
+    container_name: campusiq-analytics
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: campusiq_analytics
+      DB_USER: postgres
+      DB_PASS: postgres
+      KAFKA_BOOTSTRAP: kafka:9092
+    ports:
+      - "8086:8086"
+    restart: on-failure
+
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: campusiq-notification
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: campusiq_notification
+      DB_USER: postgres
+      DB_PASS: postgres
+      KAFKA_BOOTSTRAP: kafka:9092
+    ports:
+      - "8087:8087"
+    restart: on-failure
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: campusiq-frontend
+    depends_on:
+      - api-gateway
+    ports:
+      - "80:80"
+    restart: on-failure
+
+volumes:
+  postgres_data:
+  redis_data:

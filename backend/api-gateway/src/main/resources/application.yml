@@ -1,0 +1,71 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      # ── Single, authoritative CORS policy ──────────────────────────────────
+      # All downstream services have @CrossOrigin removed and their own CORS
+      # beans disabled, so only these headers are ever added.
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns:
+              - "http://localhost"
+              - "http://localhost:*"
+              - "http://127.0.0.1"
+              - "http://127.0.0.1:*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - PATCH
+              - DELETE
+              - OPTIONS
+            allowedHeaders:
+              - Authorization
+              - Content-Type
+              - Accept
+              - Origin
+              - X-Requested-With
+            exposedHeaders:
+              - Authorization
+            allowCredentials: true
+            maxAge: 3600
+      default-filters:
+        # Strip any duplicate CORS headers that upstream services might still emit
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
+      routes:
+        - id: auth-service
+          uri: http://${AUTH_SERVICE_HOST:localhost}:8081
+          predicates:
+            - Path=/api/auth/**
+        - id: contest-service
+          uri: http://${CONTEST_SERVICE_HOST:localhost}:8082
+          predicates:
+            - Path=/api/contests/**
+        - id: submission-service
+          uri: http://${SUBMISSION_SERVICE_HOST:localhost}:8083
+          predicates:
+            - Path=/api/submissions/**
+        - id: leaderboard-service
+          uri: http://${LEADERBOARD_SERVICE_HOST:localhost}:8085
+          predicates:
+            - Path=/api/leaderboard/**
+        - id: leaderboard-ws
+          uri: ws://${LEADERBOARD_SERVICE_HOST:localhost}:8085
+          predicates:
+            - Path=/ws/**
+        - id: analytics-service
+          uri: http://${ANALYTICS_SERVICE_HOST:localhost}:8086
+          predicates:
+            - Path=/api/analytics/**
+        - id: notification-service
+          uri: http://${NOTIFICATION_SERVICE_HOST:localhost}:8087
+          predicates:
+            - Path=/api/notifications/**
+
+jwt:
+  secret: ${JWT_SECRET:campusiq-super-secret-key-that-is-at-least-256-bits-long-for-hs256}

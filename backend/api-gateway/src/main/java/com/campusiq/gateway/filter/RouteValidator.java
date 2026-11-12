@@ -1,0 +1,28 @@
+package com.campusiq.gateway.filter;
+
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+import java.util.function.Predicate;
+
+@Component
+public class RouteValidator {
+
+    public static final List<String> OPEN_API_ENDPOINTS = List.of(
+            "/api/auth/register",
+            "/api/auth/login",
+            "/api/auth/refresh",
+            "/api/auth/validate",
+            "/api/auth/forgot-password",
+            "/api/auth/reset-password"
+    );
+
+    public Predicate<ServerHttpRequest> isSecured =
+            request -> OPEN_API_ENDPOINTS.stream()
+                    .noneMatch(uri -> request.getURI().getPath().startsWith(uri));
+
+    public boolean isSecured(ServerHttpRequest request) {
+        return isSecured.test(request);
+    }
+}

@@ -1,0 +1,16 @@
+package com.campusiq.analytics.repository;
+
+import com.campusiq.analytics.model.StudentAnalytics;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface StudentAnalyticsRepository extends JpaRepository<StudentAnalytics, Long> {
+
+    Optional<StudentAnalytics> findByUserId(Long userId);
+
+    List<StudentAnalytics> findTop10ByOrderByAverageScoreDesc();
+}

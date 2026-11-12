@@ -1,0 +1,24 @@
+server:
+  port: 8086
+
+spring:
+  application:
+    name: analytics-service
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:campusiq_analytics}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASS:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    consumer:
+      group-id: analytics-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+        spring.json.type.mapping: "com.campusiq.contest.dto.ContestEvent:com.campusiq.analytics.dto.ContestEvent,com.campusiq.evaluation.dto.EvaluationResult:com.campusiq.analytics.dto.EvaluationResult"
