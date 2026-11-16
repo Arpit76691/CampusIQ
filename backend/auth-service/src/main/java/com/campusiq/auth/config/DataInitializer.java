@@ -21,8 +21,11 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        seedUser("admin@campusiq.com", "System Administrator", "admin123", Role.ADMIN);
         seedUser("tester@campusiq.com", "Fullstack Tester", "password123", Role.FACULTY);
-        seedUser("admin@campusiq.com", "Admin User", "admin123", Role.ADMIN);
+        seedUser("arpit@campusiq.com", "Arpit Verma", "password123", Role.STUDENT);
+        seedUser("priya@campusiq.com", "Priya Sharma", "password123", Role.STUDENT);
+        seedUser("rahul@campusiq.com", "Rahul Singh", "password123", Role.STUDENT);
         seedUser("test@campusiq.com", "Test User", "password123", Role.STUDENT);
     }
 

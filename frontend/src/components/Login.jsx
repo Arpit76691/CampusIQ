@@ -37,10 +37,24 @@ const Login = () => {
     }
   };
 
-  const handleFillDemo = () => {
-    setEmail('tester@campusiq.com');
-    setPassword('password123');
+  const handleQuickLogin = async (demoEmail, demoPassword) => {
+    setEmail(demoEmail);
+    setPassword(demoPassword);
     setError('');
+    setLoading(true);
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/auth/login`,
+        { email: demoEmail, password: demoPassword }
+      );
+      login(response.data.token, response.data.refreshToken);
+      navigate('/');
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Login failed';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -92,17 +106,49 @@ const Login = () => {
           </button>
         </form>
 
-        <div className="login-demo-hint">
-          🔑 <strong>Faculty Demo Account:</strong>{' '}
-          <span
-            style={{ color: 'var(--accent-primary)', cursor: 'pointer', textDecoration: 'underline' }}
-            onClick={handleFillDemo}
-          >
-            Click to fill tester@campusiq.com / password123
-          </span>
+        <div className="persona-selector">
+          <div className="persona-title">⚡ 1-Click Persona Demo Login</div>
+          <div className="persona-grid">
+            <button
+              type="button"
+              className="persona-btn admin"
+              onClick={() => handleQuickLogin('admin@campusiq.com', 'admin123')}
+              disabled={loading}
+            >
+              <span className="role-tag">👑 ADMIN</span>
+              <span className="name-tag">System Admin</span>
+            </button>
+            <button
+              type="button"
+              className="persona-btn faculty"
+              onClick={() => handleQuickLogin('tester@campusiq.com', 'password123')}
+              disabled={loading}
+            >
+              <span className="role-tag">👨‍🏫 FACULTY</span>
+              <span className="name-tag">Prof. Sharma (DSA)</span>
+            </button>
+            <button
+              type="button"
+              className="persona-btn student"
+              onClick={() => handleQuickLogin('arpit@campusiq.com', 'password123')}
+              disabled={loading}
+            >
+              <span className="role-tag">🎓 STUDENT</span>
+              <span className="name-tag">Arpit Verma (#2)</span>
+            </button>
+            <button
+              type="button"
+              className="persona-btn student"
+              onClick={() => handleQuickLogin('priya@campusiq.com', 'password123')}
+              disabled={loading}
+            >
+              <span className="role-tag">🎓 STUDENT</span>
+              <span className="name-tag">Priya Sharma (#3)</span>
+            </button>
+          </div>
         </div>
 
-        <p className="login-register" style={{ marginTop: 20 }}>
+        <p className="login-register" style={{ marginTop: 18 }}>
           Don't have an account? <a href="#">Contact your administrator</a>
         </p>
       </div>
