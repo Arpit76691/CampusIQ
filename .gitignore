@@ -32,3 +32,6 @@ Thumbs.db
 
 # Docker volume mounts / temp files
 *.pid
+
+tools/
+
